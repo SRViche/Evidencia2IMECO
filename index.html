@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Processing Pipeline</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --input-bg: #0f172a;
+            --success-bg: #064e3b;
+            --success-text: #34d399;
+            --accent: #818cf8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 900px;
+            border: 1px solid var(--border);
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            color: var(--text-main);
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        select, button {
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 1rem;
+            background-color: var(--input-bg);
+            color: var(--text-main);
+        }
+
+        select:focus { outline: none; border-color: var(--primary); }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s, transform 0.1s;
+            margin-top: auto;
+        }
+
+        button:hover { background-color: var(--primary-hover); }
+        button:active { transform: scale(0.98); }
+        button:disabled {
+            background-color: var(--border);
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        /* ── Slider de workers ─────────────────────────────── */
+        .workers-section {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            /* Oculto por defecto; se muestra solo si approach=parallel */
+            display: none;
+        }
+
+        .workers-section.visible { display: block; }
+
+        .workers-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 0.6rem;
+        }
+
+        .workers-header label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .workers-badge {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--accent);
+            background: rgba(99,102,241,0.15);
+            padding: 0.15rem 0.6rem;
+            border-radius: 4px;
+            min-width: 3.5rem;
+            text-align: center;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover { background: var(--primary-hover); }
+
+        .workers-hint {
+            margin-top: 0.4rem;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        /* ── Resultados ────────────────────────────────────── */
+        .results {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .image-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .image-box {
+            width: 100%;
+            height: 300px;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background-color: var(--bg-color);
+        }
+
+        .image-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        .metrics-container {
+            grid-column: 1 / -1;
+            margin-top: 1.5rem;
+            padding: 1.25rem;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metrics-label { font-size: 1.1rem; font-weight: 600; color: var(--text-muted); }
+
+        .time-display {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--success-bg);
+            color: var(--success-text);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(52,211,153,0.2);
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <h1>Pipeline de Procesamiento de Imágenes</h1>
+
+    <div class="controls">
+        <div class="control-group">
+            <label for="imageSelect">Imagen de Prueba</label>
+            <select id="imageSelect">
+                <option value="cat.png">cat.png (Pequeña)</option>
+                <option value="cats2.png">cats2.png (Mediana)</option>
+                <option value="new-york-large.jpg">new-york-large.jpg (Grande)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="filterSelect">Filtro</label>
+            <select id="filterSelect">
+                <option value="grayscale">Escala de Grises</option>
+                <option value="sepia">Sepia</option>
+                <option value="negative">Negativo</option>
+                <option value="edge">Edge Detection</option>
+                <option value="gaussian">Gaussian Filter</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="approachSelect">Enfoque de Ejecución</label>
+            <select id="approachSelect" onchange="onApproachChange()">
+                <option value="sequential">Secuencial (Mutación)</option>
+                <option value="recursive">Recursivo (Listas)</option>
+                <option value="parallel">Paralelo (Hilos)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <button id="applyBtn" onclick="processImage()">Procesar Buffer</button>
+        </div>
+    </div>
+
+
+    <div class="workers-section" id="workersSection">
+        <div class="workers-header">
+            <label for="workersSlider">Número de hilos (workers)</label>
+            <span class="workers-badge" id="workersBadge">4</span>
+        </div>
+        <input
+            type="range"
+            id="workersSlider"
+            min="1" max="64" step="1" value="4"
+            oninput="onWorkersChange(this.value)"
+        >
+        <p class="workers-hint">
+            Núcleos lógicos disponibles reportados por el SO:
+            <strong id="coreHint">—</strong>.
+        </p>
+    </div>
+
+    <div class="results">
+        <div class="image-panel">
+            <label>Buffer Original</label>
+            <div class="image-box">
+                <img id="beforeImg" src="cat.png" alt="Imagen original" onerror="this.style.display='none'">
+            </div>
+        </div>
+        <div class="image-panel">
+            <label>Salida Procesada</label>
+            <div class="image-box">
+                <img id="afterImg" alt="Imagen procesada" style="display:none;">
+            </div>
+        </div>
+
+        <div class="metrics-container">
+            <span class="metrics-label">Tiempo de ejecución real:</span>
+            <div class="time-display" id="timeDisplay">0 ms</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ── Inicializar hint de núcleos con navigator.hardwareConcurrency ──
+    const coreHint = document.getElementById('coreHint');
+    coreHint.textContent = navigator.hardwareConcurrency
+        ? navigator.hardwareConcurrency + ' cores'
+        : 'desconocido';
+
+    // Sincronizar badge con el slider al cargar
+    const slider = document.getElementById('workersSlider');
+    slider.value = navigator.hardwareConcurrency
+        ? Math.min(navigator.hardwareConcurrency, 64)
+        : 4;
+    document.getElementById('workersBadge').textContent = slider.value;
+
+    function onWorkersChange(val) {
+        document.getElementById('workersBadge').textContent = val;
+    }
+
+    function onApproachChange() {
+        const approach = document.getElementById('approachSelect').value;
+        const section  = document.getElementById('workersSection');
+        // Mostrar slider solo cuando el enfoque es paralelo
+        section.classList.toggle('visible', approach === 'parallel');
+    }
+
+    document.getElementById('imageSelect').addEventListener('change', function(e) {
+        const img = document.getElementById('beforeImg');
+        img.src = e.target.value;
+        img.style.display = 'block';
+        document.getElementById('afterImg').style.display = 'none';
+        const td = document.getElementById('timeDisplay');
+        td.innerText = '0 ms';
+        td.style.color = '';
+        td.style.backgroundColor = '';
+    });
+
+    async function processImage() {
+        const imageName = document.getElementById('imageSelect').value;
+        const filter    = document.getElementById('filterSelect').value;
+        const approach  = document.getElementById('approachSelect').value;
+        const workers   = parseInt(document.getElementById('workersSlider').value, 10);
+        const btn       = document.getElementById('applyBtn');
+        const td        = document.getElementById('timeDisplay');
+        const afterImg  = document.getElementById('afterImg');
+
+        btn.disabled = true;
+        btn.innerText = 'Computando...';
+        td.innerText = '--- ms';
+        td.style.color = 'var(--text-main)';
+        td.style.backgroundColor = 'var(--border)';
+
+        try {
+            const body = { image: imageName, filter, approach };
+            // Solo enviamos workers si el enfoque es paralelo
+            if (approach === 'parallel') body.workers = workers;
+
+            const response = await fetch('/api/process', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) throw new Error('Fallo en el backend');
+
+            const result = await response.json();
+
+            afterImg.src = 'data:image/png;base64,' + result.base64Image;
+            afterImg.style.display = 'block';
+
+            td.innerText = `${result.timeMs} ms`;
+            td.style.color = 'var(--success-text)';
+            td.style.backgroundColor = 'var(--success-bg)';
+
+        } catch (error) {
+            console.error('Error del pipeline:', error);
+            td.innerText = 'Error';
+            td.style.color = '#f87171';
+            td.style.backgroundColor = '#7f1d1d';
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'Procesar Buffer';
+        }
+    }
+</script>
+</body>
+</html>
