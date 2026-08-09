@@ -1,4 +1,4 @@
-# PixelFlow — Image Processing Pipeline in Racket
+# PixelFilter — Image Processing Pipeline in Racket
 
 A local image processing pipeline built in **Racket** that exposes a web interface for applying filters to images using three distinct programming paradigms: sequential mutation, pure functional recursion, and parallel execution with `futures`.
 
